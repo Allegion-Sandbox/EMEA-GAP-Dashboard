@@ -238,9 +238,9 @@ t.sheetStubs=true}if(t.type=="array"){t.type="binary";var a=xk(e,t);t.type="arra
       <div class="sub" id="kpi-pending-sub">of 2,108 devices since Oct 2023</div>
     </div>
     <div class="kpi-card blue">
-      <div class="label">On-Shelf Devices</div>
-      <div class="value" id="kpi-shelf-val">366</div>
-      <div class="sub" id="kpi-shelf-sub">22.4% aging (&gt;6 months)</div>
+      <div class="label">Aging (&gt;6 Months)</div>
+      <div class="value" id="kpi-shelf-val">82</div>
+      <div class="sub" id="kpi-shelf-sub">22.40% — attention needed</div>
     </div>
     <div class="kpi-card green">
       <div class="label">Present in AMDB</div>
@@ -1379,8 +1379,8 @@ function _updateKPIs() {
   _s('kpi-gap-sub', 'of ' + totalDev.toLocaleString() + ' EMEA devices — ' + gapPct + '%');
   _s('kpi-pending-val', pendFST.toLocaleString());
   _s('kpi-pending-sub', 'of ' + totalDev.toLocaleString() + ' devices since Oct 2023');
-  _s('kpi-shelf-val', totalShelf.toLocaleString());
-  _s('kpi-shelf-sub', agingPct + '% aging (>6 months)');
+  _s('kpi-shelf-val', aging6.toLocaleString());
+  _s('kpi-shelf-sub', agingPct + '% — attention needed');
   _s('kpi-present-val', presAMDB.toLocaleString());
   _s('kpi-present-sub', 'of ' + totalDev.toLocaleString() + ' since Oct 2023');
   const alertEl = document.getElementById('overview-alert');
