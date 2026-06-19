@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IT Hardware Assets Dashboard — SN Platform Analytics Prototype</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, Arial, sans-serif;
+      background: #f4f5f7;
+      color: #1d1d1d;
+      font-size: 13px;
+    }
+
+    /* ── ServiceNow Top Navigation Bar ─────────────────────────────── */
+    .sn-topbar {
+      background: #1c2b33;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .sn-logo {
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .sn-logo .dot { width: 8px; height: 8px; border-radius: 50%; background: #61d836; }
+    .sn-topbar .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: 20px;
+    }
+    .sn-topbar .breadcrumb span { color: rgba(255,255,255,0.55); font-size: 12px; }
+    .sn-topbar .breadcrumb .sep { color: rgba(255,255,255,0.3); }
+    .sn-topbar .breadcrumb .current { color: rgba(255,255,255,0.9); }
+    .sn-topbar .right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .sn-topbar .right span { color: rgba(255,255,255,0.6); font-size: 12px; }
+    .sn-avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: #0e77b7;
+      color: #fff; font-size: 11px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* ── Module Header ──────────────────────────────────────────────── */
+    .module-header {
+      background: #fff;
+      border-bottom: 1px solid #dde1e7;
+      padding: 14px 20px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .module-header h1 { font-size: 20px; font-weight: 700; color: #1c2b33; }
+    .module-header .source {
+      font-size: 11px;
+      color: #697077;
+      margin-top: 3px;
+      font-family: 'Courier New', monospace;
+      background: #f4f5f7;
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 3px;
+    }
+    .prototype-banner {
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-size: 12px;
+      color: #795548;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .prototype-banner strong { color: #e65100; }
+
+    /* ── Filter Bar ─────────────────────────────────────────────────── */
+    .filter-bar {
+      background: #ebecf0;
+      border-bottom: 1px solid #dde1e7;
+      padding: 9px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .filter-bar .filter-lbl { font-size: 12px; font-weight: 700; color: #4d5358; margin-right: 4px; }
+    .filter-group { display: flex; align-items: center; gap: 6px; }
+    .filter-group label { font-size: 12px; color: #4d5358; font-weight: 600; }
+    .filter-bar select {
+      border: 1px solid #c3c7cf;
+      border-radius: 4px;
+      padding: 5px 8px;
+      font-size: 12px;
+      background: #fff;
+      color: #1d1d1d;
+      cursor: pointer;
+      min-width: 160px;
+    }
+    .filter-bar select:disabled { background: #f0f2f5; color: #697077; cursor: not-allowed; }
+    .filter-bar select:focus { outline: none; border-color: #0e77b7; box-shadow: 0 0 0 2px rgba(14,119,183,0.18); }
+    .btn {
+      padding: 5px 14px; border-radius: 4px; font-size: 12px;
+      font-weight: 700; cursor: pointer; border: 1px solid transparent;
+    }
+    .btn-primary { background: #0e77b7; color: #fff; }
+    .btn-primary:hover { background: #0a5f91; }
+    .btn-secondary { background: #fff; color: #4d5358; border-color: #c3c7cf; }
+    .filter-note {
+      margin-left: auto;
+      font-size: 11px;
+      color: #1c4f82;
+      background: #e4f0fb;
+      padding: 4px 10px;
+      border-radius: 12px;
+      border: 1px solid #b6d9f5;
+      font-weight: 600;
+    }
+
+    /* ── Tab Bar ────────────────────────────────────────────────────── */
+    .tab-bar {
+      background: #fff;
+      border-bottom: 2px solid #dde1e7;
+      padding: 0 20px;
+      display: flex;
+    }
+    .tab {
+      padding: 12px 20px;
+      font-size: 13px; font-weight: 500;
+      color: #697077;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: color 0.15s;
+      user-select: none;
+    }
+    .tab:hover { color: #0e77b7; }
+    .tab.active { color: #0e77b7; border-bottom-color: #0e77b7; font-weight: 700; }
+
+    /* ── Dashboard Content ──────────────────────────────────────────── */
+    .dashboard { padding: 18px 20px 32px; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ── Section Label ──────────────────────────────────────────────── */
+    .section-label {
+      font-size: 11px; font-weight: 700;
+      color: #697077; text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin: 20px 0 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #dde1e7;
+    }
+    .section-label:first-of-type { margin-top: 0; }
+
+    /* ── Widget Grid ────────────────────────────────────────────────── */
+    .widget-row { display: grid; gap: 14px; margin-bottom: 14px; }
+    .cols-4 { grid-template-columns: repeat(4, 1fr); }
+    .cols-3 { grid-template-columns: repeat(3, 1fr); }
+    .cols-2 { grid-template-columns: repeat(2, 1fr); }
+    .cols-1 { grid-template-columns: 1fr; }
+    .col-span-2 { grid-column: span 2; }
+
+    /* ── Base Widget Card ───────────────────────────────────────────── */
+    .widget {
+      background: #fff;
+      border-radius: 6px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.09), 0 1px 2px rgba(0,0,0,0.05);
+      overflow: hidden;
+    }
+    .widget-header {
+      padding: 11px 14px 9px;
+      border-bottom: 1px solid #f0f2f5;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .widget-title { font-size: 13px; font-weight: 700; color: #1d1d1d; }
+    .widget-subtitle { font-size: 11px; color: #697077; margin-top: 2px; }
+    .widget-type-badge {
+      font-size: 10px; font-weight: 700;
+      color: #5a3ea1;
+      background: #ede9f8;
+      border-radius: 3px;
+      padding: 2px 7px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      margin-left: 8px;
+    }
+    .widget-body { padding: 14px; }
+
+    /* ── KPI / Single Score Widget ──────────────────────────────────── */
+    .kpi-card { position: relative; }
+    .kpi-card .kpi-accent {
+      position: absolute; left: 0; top: 0; bottom: 0;
+      width: 4px; border-radius: 6px 0 0 6px;
+    }
+    .kpi-card .widget-body { padding: 12px 14px 14px 18px; }
+    .kpi-value { font-size: 34px; font-weight: 800; line-height: 1; margin: 8px 0 4px; }
+    .kpi-desc { font-size: 11px; color: #697077; }
+    .kpi-tag {
+      display: inline-flex; align-items: center; gap: 3px;
+      font-size: 10px; font-weight: 700;
+      padding: 2px 7px; border-radius: 10px;
+      margin-top: 8px;
+    }
+    /* Color variants */
+    .kpi-green .kpi-accent { background: #3da75d; }
+    .kpi-green .kpi-value { color: #2a7a42; }
+    .kpi-green .kpi-tag { background: #e6f5ec; color: #2a7a42; }
+    .kpi-red .kpi-accent { background: #c62828; }
+    .kpi-red .kpi-value { color: #c62828; }
+    .kpi-red .kpi-tag { background: #fdecea; color: #c62828; }
+    .kpi-blue .kpi-accent { background: #0e77b7; }
+    .kpi-blue .kpi-value { color: #0e77b7; }
+    .kpi-blue .kpi-tag { background: #e4f0fb; color: #0e77b7; }
+    .kpi-amber .kpi-accent { background: #e5a117; }
+    .kpi-amber .kpi-value { color: #b47b00; }
+    .kpi-amber .kpi-tag { background: #fff8e1; color: #b47b00; }
+    .kpi-purple .kpi-accent { background: #7b3fc4; }
+    .kpi-purple .kpi-value { color: #7b3fc4; }
+    .kpi-purple .kpi-tag { background: #ede9f8; color: #7b3fc4; }
+
+    /* ── Chart Container ────────────────────────────────────────────── */
+    .chart-wrap { position: relative; }
+
+    /* ── Notes / Implementation Callouts ───────────────────────────── */
+    .impl-note {
+      margin-top: 10px;
+      padding: 7px 10px;
+      background: #f0f7ff;
+      border-left: 3px solid #0e77b7;
+      border-radius: 0 4px 4px 0;
+      font-size: 11px;
+      color: #1c4f82;
+      line-height: 1.5;
+    }
+    .impl-note .note-title { font-weight: 700; margin-bottom: 2px; }
+    .warn-note {
+      margin-top: 10px;
+      padding: 7px 10px;
+      background: #fffdf0;
+      border-left: 3px solid #e5a117;
+      border-radius: 0 4px 4px 0;
+      font-size: 11px;
+      color: #795548;
+      line-height: 1.5;
+    }
+
+    /* ── Insight Banner ─────────────────────────────────────────────── */
+    .insight-banner {
+      background: #fff;
+      border: 1px solid #bee3f8;
+      border-left: 4px solid #0e77b7;
+      border-radius: 6px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    .insight-banner.warn-banner { border-color: #ffe082; border-left-color: #e5a117; background: #fffdf0; }
+    .insight-item { font-size: 12px; color: #4d5358; display: flex; align-items: flex-start; gap: 6px; }
+    .insight-item .icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+    .insight-item strong { color: #1d1d1d; }
+
+    /* ── Data Quality Scorecard ─────────────────────────────────────── */
+    .dq-item {
+      padding: 9px 0;
+      border-bottom: 1px solid #f4f5f7;
+    }
+    .dq-item:last-child { border-bottom: none; }
+    .dq-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+    .dq-label { font-size: 12px; color: #4d5358; }
+    .dq-stat { font-size: 12px; font-weight: 700; }
+    .dq-stat.good { color: #2a7a42; }
+    .dq-stat.warn { color: #b47b00; }
+    .dq-stat.danger { color: #c62828; }
+    .dq-bar-bg { height: 5px; background: #f0f2f5; border-radius: 3px; overflow: hidden; }
+    .dq-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+    .dq-sub { font-size: 10px; color: #697077; margin-top: 3px; }
+
+    /* ── Responsive ─────────────────────────────────────────────────── */
+    @media (max-width: 1200px) {
+      .cols-4 { grid-template-columns: repeat(2, 1fr); }
+      .cols-3 { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 800px) {
+      .cols-4, .cols-3, .cols-2 { grid-template-columns: 1fr; }
+      .col-span-2 { grid-column: span 1; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     SERVICE NOW TOP NAVIGATION BAR
+     ════════════════════════════════════════════════════════════════════ -->
+<div class="sn-topbar">
+  <div class="sn-logo">
+    <div class="dot"></div>
+    ServiceNow
+  </div>
+  <div class="breadcrumb">
+    <span class="sep">›</span>
+    <span>IT Asset Management</span>
+    <span class="sep">›</span>
+    <span>Platform Analytics</span>
+    <span class="sep">›</span>
+    <span class="current">IT Hardware Assets Dashboard</span>
+  </div>
+  <div class="right">
+    <span>Allegion — Global</span>
+    <div class="sn-avatar">AM</div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     MODULE HEADER
+     ════════════════════════════════════════════════════════════════════ -->
+<div class="module-header">
+  <div>
+    <h1>IT Hardware Assets — Desktops &amp; Laptops</h1>
+    <div class="source">Table: alm_hardware &nbsp;|&nbsp; Filter: model_category IN ('Personal Computer','Computer') AND model.name NOT LIKE '%Virtual%' AND model.name NOT LIKE '%Server%'</div>
+  </div>
+  <div class="prototype-banner">
+    ⚠ &nbsp;<strong>PROTOTYPE / SAMPLE ONLY</strong> &nbsp;— Visual reference for SN dashboard build
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     GLOBAL FILTER BAR
+     ════════════════════════════════════════════════════════════════════ -->
+<div class="filter-bar">
+  <span class="filter-lbl">Filters:</span>
+
+  <div class="filter-group">
+    <label>Asset Type</label>
+    <select disabled>
+      <option>Desktops &amp; Laptops (Fixed)</option>
+    </select>
+  </div>
+
+  <div class="filter-group">
+    <label>Region</label>
+    <select id="filter-region">
+      <option>All Regions</option>
+      <option>Americas</option>
+      <option>EMEIA</option>
+      <option>APAC</option>
+    </select>
+  </div>
+
+  <div class="filter-group">
+    <label>Country</label>
+    <select id="filter-country">
+      <option>All Countries</option>
+      <option>United States of America</option>
+      <option>Germany</option>
+      <option>Mexico</option>
+      <option>India</option>
+      <option>France</option>
+      <option>Canada</option>
+      <option>Italy</option>
+      <option>Australia</option>
+      <option>Netherlands</option>
+      <option>United Kingdom</option>
+      <option>Poland</option>
+      <option>New Zealand</option>
+      <option>China</option>
+      <option>Spain</option>
+      <option>Belgium</option>
+    </select>
+  </div>
+
+  <div class="filter-group">
+    <label>Lifecycle Stage</label>
+    <select id="filter-lifecycle">
+      <option>All Stages</option>
+      <option>Operational</option>
+      <option>End of Life</option>
+      <option>Awaiting Verification</option>
+      <option>Inventory</option>
+      <option>Missing</option>
+    </select>
+  </div>
+
+  <button class="btn btn-primary">Apply Filters</button>
+  <button class="btn btn-secondary">Reset</button>
+
+  <span class="filter-note">📊 23,172 records match current filters</span>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     TAB BAR
+     ════════════════════════════════════════════════════════════════════ -->
+<div class="tab-bar">
+  <div class="tab active" onclick="switchTab('leadership', this)">📈 Leadership View</div>
+  <div class="tab" onclick="switchTab('fieldtech', this)">🔧 Field Technician View</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     DASHBOARD CONTENT
+     ════════════════════════════════════════════════════════════════════ -->
+<div class="dashboard">
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       TAB 1 — LEADERSHIP VIEW
+       ══════════════════════════════════════════════════════════════════ -->
+  <div id="tab-leadership" class="tab-content active">
+
+    <!-- Key Insights Banner -->
+    <div class="insight-banner">
+      <div class="insight-item">
+        <span class="icon">📌</span>
+        <span><strong>23,172</strong> desktops &amp; laptops tracked globally — 18,421 laptops &amp; 4,751 desktops across 30+ countries.</span>
+      </div>
+      <div class="insight-item">
+        <span class="icon">⚠️</span>
+        <span><strong>4,566 assets (19.7%)</strong> are End of Life — highest concentration in Americas and EMEIA. Budget refresh urgently needed.</span>
+      </div>
+      <div class="insight-item">
+        <span class="icon">💳</span>
+        <span><strong>7,564 leased assets</strong> actively tracked via DFS Americas. Lease data is incomplete for EMEIA (12,556 assets have no acquisition method).</span>
+      </div>
+    </div>
+
+    <!-- ── SECTION: Asset Overview ───────────────────────────────── -->
+    <div class="section-label">Asset Overview</div>
+    <div class="widget-row cols-4">
+
+      <!-- KPI 1: Total Active -->
+      <div class="widget kpi-card kpi-green">
+        <div class="kpi-accent"></div>
+        <div class="widget-header">
+          <div>
+            <div class="widget-title">Total Active Assets</div>
+            <div class="widget-subtitle">Desktops &amp; Laptops — In Use</div>
+          </div>
+          <span class="widget-type-badge">Single Score</span>
+        </div>
+        <div class="widget-body">
+          <div class="kpi-value">16,861</div>
+          <div class="kpi-desc">install_status = "In use"</div>
+          <div class="kpi-tag">✓ Currently deployed</div>
+        </div>
+      </div>
+
+      <!-- KPI 2: End of Life -->
+      <div class="widget kpi-card kpi-red">
+        <div class="kpi-accent"></div>
+        <div class="widget-header">
+          <div>
+            <div class="widget-title">End of Life Assets</div>
+            <div class="widget-subtitle">Requires refresh or disposal</div>
+          </div>
+          <span class="widget-type-badge">Single Score</span>
+        </div>
+        <div class="widget-body">
+          <div class="kpi-value">4,566</div>
+          <div class="kpi-desc">life_cycle_stage = "End of Life"</div>
+          <div class="kpi-tag">⚠ 19.7% of fleet</div>
+        </div>
+      </div>
+
+      <!-- KPI 3: Active Leases -->
+      <div class="widget kpi-card kpi-blue">
+        <div class="kpi-accent"></div>
+        <div class="widget-header">
+          <div>
+            <div class="widget-title">Active Leased Assets</div>
+            <div class="widget-subtitle">Operational — Lease method</div>
+          </div>
+          <span class="widget-type-badge">Single Score</span>
+        </div>
+        <div class="widget-body">
+          <div class="kpi-value">4,153</div>
+          <div class="kpi-desc">acquisition_method = "Lease" AND lifecycle = "Operational"</div>
+          <div class="kpi-tag">💳 Financial liability</div>
+        </div>
+      </div>
+
+      <!-- KPI 4: Awaiting Verification -->
+      <div class="widget kpi-card kpi-amber">
+        <div class="kpi-accent"></div>
+        <div class="widget-header">
+          <div>
+            <div class="widget-title">Awaiting Verification</div>
+            <div class="widget-subtitle">Scan date &gt; 30 days or unverified</div>
+          </div>
+          <span class="widget-type-badge">Single Score</span>
+        </div>
+        <div class="widget-body">
+          <div class="kpi-value">1,260</div>
+          <div class="kpi-desc">life_cycle_stage = "Awaiting Verification"</div>
+          <div class="kpi-tag">🔍 Needs attention</div>
+        </div>
+      </div>
+
+    </div><!-- /KPI Row -->
+
+    <!-- ── SECTION: Fleet Composition ───────────────────────────── -->
+    <div class="section-label">Fleet Composition</div>
+    <div class="widget-row cols-3">
+
+      <!-- Donut 1: Device Type -->
+      <div class="widget">
+        <div class="widget-header">
+          <div>
+            <div class="widget-title">Device Type Split</div>
+            <div class="widget-subtitle">Laptops vs Desktops</div>
+          </div>
+          <span class="widget-type-badge">Donut Chart</span>
+        </div>
+        <div class="widget-body">
+          <div class="chart-wrap" style="height:190px">
+            <canvas id="c-device-type"></canvas>
+          </div>
+          <div class="impl-note">
+            <div class="note-title">SN: Breakdown widget</div>
+            Group by <strong>model.name</strong> using a scripted dimension that classifies Latitude/MacBook/ProBook → Laptop, OptiPlex/Precision → Desktop.
+          </div>
+        </div>
+      </div>
+
+      <!-- Donut 2: Lifecycle Stage -->
+      <div class="widget">
+        <div class="widget-header">
+          <div>
+            <div class="widget-title">Lifecycle Stage Breakdown</div>
+            <div class="widget-subtitle">All desktop &amp; laptop assets</div>
+          </div>
+          <span class="widget-type-badge">Donut Chart</span>
+        </div>
+        <div class="widget-body">
+          <div class="chart-wrap" style="height:190px">
+            <canvas id="c-lifecycle"></canvas>
+          </div>
+          <div class="impl-note">
+            <div class="note-title">SN: Breakdown widget</div>
+            Group by <strong>life_cycle_stage</strong> field on <code>alm_hardware</code>.
+          </div>
+        </div>
+      </div>
+
+      <!-- Donut 3: Acquisition Method -->
+      <div class="widget">
+        <div class="widget-header">
+          <div>
+            <div class="widget-title">Acquisition Method</div>
+            <div class="widget-subtitle">Leased vs Purchased vs Not Specified</div>
+          </div>
+          <span class="widget-type-badge">Donut Chart</span>
+        </div>
+        <div class="widget-body">
+          <div class="chart-wrap" style="height:190px">
+            <canvas id="c-acquisition"></canvas>
+          </div>
+          <div class="warn-note">
+            ⚠ <strong>12,556 EMEIA assets</strong> have no acquisition method recorded. Lease/Purchase data is primarily populated for US assets only. Field: <strong>acquisition_method</strong>.
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /Fleet Composition -->
+
+    <!-- ── SECTION: Geographic Distribution ─────────────────────── -->
+    <div class="section-label">Geographic Distribution</div>
+    <div class="widget-row cols-2">
+
+      <!-- Bar: Top 10 Countries -->
+      <div class="widget">
+        <div class="widget-header">
+          <div>
+            <div class="widget-title">Assets by Country — Top 10</div>
+            <div class="widget-subtitle">Total desktops &amp; laptops per country</div>
+          </div>
+          <span class="widget-type-badge">Horizontal Bar</span>
+        </div>
+        <div class="widget-body">
+          <div class="chart-wrap" style="height:270px">
+            <canvas id="c-countries"></canvas>
+          </div>
+          <div class="impl-note">
+            <div class="note-title">SN: Horizontal Bar Report</div>
+            Group by <strong>location.country</strong>, count rows, sort descending, limit to top 10. Add a region filter to drill down.
+          </div>
+        </div>
+      </div>
+
+      <!-- Stacked Bar: Status by Acquisition Method -->
+      <div class="widget">
+        <div class="widget-header">
+          <div>
+            <div class="widget-title">Asset Status by Acquisition Method</div>
+            <div class="widget-subtitle">Lease · Purchase · Not Specified breakdown by install status</div>
+          </div>
+          <span class="widget-type-badge">Stacked Bar</span>
+        </div>
+        <div class="widget-body">
+          <div class="chart-wrap" style="height:270px">
+            <canvas id="c-status-acq"></canvas>
+          </div>
+          <div class="impl-note">
+            <div class="note-title">SN: Stacked Bar Report</div>
+            Group by <strong>acquisition_method</strong> (x-axis), stack by <strong>install_status</strong>. Highlights that EMEIA lease data needs population.
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /Geographic -->
+
+    <!-- ── SECTION: EOL Deep Dive ────────────────────────────────── -->
+    <div class="section-label">End of Life Analysis</div>
+    <div class="widget-row cols-2">
+
+      <!-- Bar: EOL by Top Countries -->
+      <div class="widget">
+        <div class="widget-header">
+          <div>
+            <div class="widget-title">EOL Assets by Country — Top 8</div>
+            <div class="widget-subtitle">Where refresh is most urgent</div>
+          </div>
+          <span class="widget-type-badge">Horizontal Bar</span>
+        </div>
+        <div class="widget-body">
+          <div class="chart-wrap" style="height:230px">
+            <canvas id="c-eol-country"></canvas>
+          </div>
+          <div class="impl-note">
+            <div class="note-title">SN: Horizontal Bar</div>
+            Filter: <strong>life_cycle_stage = "End of Life"</strong>, group by <strong>location.country</strong>, count descending.
+          </div>
+        </div>
+      </div>
+
+      <!-- Bar: EOL by Acquisition (Lease vs Purchase) -->
+      <div class="widget">
+        <div class="widget-header">
+          <div>
+            <div class="widget-title">EOL — Lease vs Purchased</div>
+            <div class="widget-subtitle">2,307 leased · 2,201 purchased EOL assets</div>
+          </div>
+          <span class="widget-type-badge">Donut Chart</span>
+        </div>
+        <div class="widget-body">
+          <div class="chart-wrap" style="height:190px">
+            <canvas id="c-eol-acq"></canvas>
+          </div>
+          <div class="impl-note">
+            <div class="note-title">SN: Donut / Breakdown</div>
+            Filter: <strong>life_cycle_stage = "End of Life"</strong>, group by <strong>acquisition_method</strong>.
+            <br>Leased EOL → needs return/renewal action. Purchased EOL → needs disposal approval.
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /EOL -->
+
+    <!-- ── SECTION: Manufacturer ──────────────────────────────────── -->
+    <div class="section-label">Manufacturer Overview</div>
+    <div class="widget-row cols-1">
+      <div class="widget">
+        <div class="widget-header">
+          <div>
+            <div class="widget-title">Assets by Manufacturer</div>
+            <div class="widget-subtitle">Dell dominates — 90%+ of the fleet</div>
+          </div>
+          <span class="widget-type-badge">Horizontal Bar</span>
+        </div>
+        <div class="widget-body">
+          <div class="chart-wrap" style="height:160px">
+            <canvas id="c-manufacturer"></canvas>
+          </div>
+          <div class="impl-note">
+            <div class="note-title">SN: Horizontal Bar Report</div>
+            Group by <strong>model.manufacturer</strong>, filter to Personal Computer category only.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /tab-leadership -->
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       TAB 2 — FIELD TECHNICIAN VIEW
+       ══════════════════════════════════════════════════════════════════ -->
+  <div id="tab-fieldtech" class="tab-content">
+
+    <!-- Key Insights Banner (Field Tech) -->
+    <div class="insight-banner warn-banner">
+      <div class="insight-item">
+        <span class="icon">🚨</span>
+        <span><strong>1,149 assets</strong> have a last scan date &gt;30 days — CrowdStrike/SCCM compliance needs investigation by region.</span>
+      </div>
+      <div class="insight-item">
+        <span class="icon">🗑️</span>
+        <span><strong>2,206 assets</strong> pending disposal and <strong>2,215</strong> lease returns awaiting processing. Backlog needs clearing.</span>
+      </div>
+      <div class="insight-item">
+        <span class="icon">📋</span>
+        <span><strong>12,556 EMEIA assets</strong> missing acquisition method data. Regional IT leads should populate the <code>acquisition_method</code> field.</span>
+      </div>
+    </div>
+
+    <!-- ── SECTION: Action Required ──────────────────────────────── -->
+    <div class="section-label">Action Required</div>
+    <div class="widget-row cols-4">
+
+      <!-- KPI: Scan > 30 Days -->
+      <div class="widget kpi-card kpi-red">
+        <div class="kpi-accent"></div>
+        <div class="widget-header">
+          <div>
+            <div class="widget-title">Scan Date &gt; 30 Days</div>
+            <div class="widget-subtitle">CrowdStrike / SCCM compliance</div>
+          </div>
+          <span class="widget-type-badge">Single Score</span>
+        </div>
+        <div class="widget-body">
+          <div class="kpi-value">1,149</div>
+          <div class="kpi-desc">substatus = "Scan date &gt; 30 days"</div>
+          <div class="kpi-tag">🔴 Non-compliant</div>
+        </div>
+      </div>
+
+      <!-- KPI: Pending Disposal -->
+      <div class="widget kpi-card kpi-amber">
+        <div class="kpi-accent"></div>
+        <div class="widget-header">
+          <div>
+            <div class="widget-title">Pending Disposal</div>
+            <div class="widget-subtitle">Awaiting disposal processing</div>
+          </div>
+          <span class="widget-type-badge">Single Score</span>
+        </div>
+        <div class="widget-body">
+          <div class="kpi-value">2,206</div>
+          <div class="kpi-desc">substatus = "Pending disposal"</div>
+          <div class="kpi-tag">⏳ Backlog</div>
+        </div>
+      </div>
+
+      <!-- KPI: Missing / Lost -->
+      <div class="widget kpi-card kpi-red">
+        <div class="kpi-accent"></div>
+        <div class="widget-header">
+          <div>
+            <div class="widget-title">Missing / Lost Assets</div>
+            <div class="widget-subtitle">Physical location unknown</div>
+          </div>
+          <span class="widget-type-badge">Single Score</span>
+        </div>
+        <div class="widget-body">
+          <div class="kpi-value">104</div>
+          <div class="kpi-desc">install_status = "Missing" OR substatus = "Lost"</div>
+          <div class="kpi-tag">🚨 72 are Leased</div>
+        </div>
+      </div>
+
+      <!-- KPI: Lease Returns Pending -->
+      <div class="widget kpi-card kpi-purple">
+        <div class="kpi-accent"></div>
+        <div class="widget-header">
+          <div>
+            <div class="widget-title">Lease Returns Pending</div>
+            <div class="widget-subtitle">Physical return not yet processed</div>
+          </div>
+          <span class="widget-type-badge">Single Score</span>
+        </div>
+        <div class="widget-body">
+          <div class="kpi-value">44</div>
+          <div class="kpi-desc">substatus = "Pending return"</div>
+          <div class="kpi-tag">📦 Return backlog</div>
+        </div>
+      </div>
+
+    </div><!-- /Action KPIs -->
+
+    <!-- ── SECTION: Operational Breakdown ────────────────────────── -->
+    <div class="section-label">Operational Breakdown</div>
+    <div class="widget-row cols-2">
+
+      <!-- Bar: Assets by Substatus (actionable) -->
+      <div class="widget">
+        <div class="widget-header">
+          <div>
+            <div class="widget-title">Assets by Substatus</div>
+            <div class="widget-subtitle">Actionable states only — excludes blank / "Assigned"</div>
+          </div>
+          <span class="widget-type-badge">Bar Chart</span>
+        </div>
+        <div class="widget-body">
+          <div class="chart-wrap" style="height:250px">
+            <canvas id="c-substatus"></canvas>
+          </div>
+          <div class="impl-note">
+            <div class="note-title">SN: Bar Chart Report</div>
+            Group by <strong>substatus</strong>, exclude blank and "Assigned" rows. Sort descending. Field techs can drill into each bar to see individual records.
+          </div>
+        </div>
+      </div>
+
+      <!-- Horizontal Bar: Support Groups -->
+      <div class="widget">
+        <div class="widget-header">
+          <div>
+            <div class="widget-title">Assets by Support Group — Top 8</div>
+            <div class="widget-subtitle">Workload distribution across field teams</div>
+          </div>
+          <span class="widget-type-badge">Horizontal Bar</span>
+        </div>
+        <div class="widget-body">
+          <div class="chart-wrap" style="height:250px">
+            <canvas id="c-support-groups"></canvas>
+          </div>
+          <div class="impl-note">
+            <div class="note-title">SN: Horizontal Bar Report</div>
+            Group by <strong>support_group</strong>, count rows, sort descending, top 8. Country/Region filter applies.
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /Operational -->
+
+    <!-- ── SECTION: Asset Status & Data Quality ───────────────────── -->
+    <div class="section-label">Asset Status &amp; Data Quality</div>
+    <div class="widget-row cols-2">
+
+      <!-- Donut: Install Status -->
+      <div class="widget">
+        <div class="widget-header">
+          <div>
+            <div class="widget-title">Install Status Distribution</div>
+            <div class="widget-subtitle">Full fleet — all lifecycle stages</div>
+          </div>
+          <span class="widget-type-badge">Donut Chart</span>
+        </div>
+        <div class="widget-body">
+          <div class="chart-wrap" style="height:200px">
+            <canvas id="c-install-status"></canvas>
+          </div>
+          <div class="impl-note">
+            <div class="note-title">SN: Breakdown / Donut</div>
+            Group by <strong>install_status</strong> on <code>alm_hardware</code>. Shows current physical state of all assets.
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Quality Scorecard -->
+      <div class="widget">
+        <div class="widget-header">
+          <div>
+            <div class="widget-title">Data Quality Scorecard</div>
+            <div class="widget-subtitle">Field completeness — identify cleanup priorities</div>
+          </div>
+          <span class="widget-type-badge">List / Custom</span>
+        </div>
+        <div class="widget-body">
+
+          <div class="dq-item">
+            <div class="dq-row">
+              <span class="dq-label">acquisition_method populated</span>
+              <span class="dq-stat danger">45.9% complete</span>
+            </div>
+            <div class="dq-bar-bg"><div class="dq-bar-fill" style="width:45.9%;background:#c62828"></div></div>
+            <div class="dq-sub">12,556 assets missing — almost entirely EMEIA records. Assign to regional IT leads.</div>
+          </div>
+
+          <div class="dq-item">
+            <div class="dq-row">
+              <span class="dq-label">location.country populated</span>
+              <span class="dq-stat warn">87.7% complete</span>
+            </div>
+            <div class="dq-bar-bg"><div class="dq-bar-fill" style="width:87.7%;background:#e5a117"></div></div>
+            <div class="dq-sub">~2,850 assets have no country — will fall out of region/country filters.</div>
+          </div>
+
+          <div class="dq-item">
+            <div class="dq-row">
+              <span class="dq-label">life_cycle_stage (non "To Be Determined")</span>
+              <span class="dq-stat danger">48.7% complete</span>
+            </div>
+            <div class="dq-bar-bg"><div class="dq-bar-fill" style="width:48.7%;background:#c62828"></div></div>
+            <div class="dq-sub">11,895 assets still at default "To Be Determined" — lifecycle cannot be tracked for these.</div>
+          </div>
+
+          <div class="dq-item">
+            <div class="dq-row">
+              <span class="dq-label">assigned_to (active users only)</span>
+              <span class="dq-stat warn">~80% clean</span>
+            </div>
+            <div class="dq-bar-bg"><div class="dq-bar-fill" style="width:80%;background:#e5a117"></div></div>
+            <div class="dq-sub">Multiple assets assigned to Inactive users — these need re-allocation or unassignment.</div>
+          </div>
+
+          <div class="dq-item">
+            <div class="dq-row">
+              <span class="dq-label">support_group assigned</span>
+              <span class="dq-stat warn">89.3% complete</span>
+            </div>
+            <div class="dq-bar-bg"><div class="dq-bar-fill" style="width:89.3%;background:#e5a117"></div></div>
+            <div class="dq-sub">~2,469 assets have no support group — no team is accountable for them.</div>
+          </div>
+
+          <div class="impl-note" style="margin-top:12px">
+            <div class="note-title">SN: Implementation</div>
+            Build as a <strong>PA Indicator</strong> tracking field completeness % weekly. Use scripted indicators that count non-null vs total. Trend these over time to show data quality improvement.
+          </div>
+
+        </div>
+      </div>
+
+    </div><!-- /Status & DQ -->
+
+    <!-- ── SECTION: Lease vs Purchase Deep Dive ───────────────────── -->
+    <div class="section-label">Lease vs Purchase — Field Action</div>
+    <div class="widget-row cols-3">
+
+      <!-- KPI: Total Leased In Use -->
+      <div class="widget kpi-card kpi-blue">
+        <div class="kpi-accent"></div>
+        <div class="widget-header">
+          <div>
+            <div class="widget-title">Leased Assets — In Use</div>
+            <div class="widget-subtitle">Active lease, deployed to users</div>
+          </div>
+          <span class="widget-type-badge">Single Score</span>
+        </div>
+        <div class="widget-body">
+          <div class="kpi-value">4,158</div>
+          <div class="kpi-desc">acquisition_method = "Lease" AND install_status = "In use"</div>
+          <div class="kpi-tag">💳 DFS Americas tracked</div>
+        </div>
+      </div>
+
+      <!-- KPI: Leased EOL -->
+      <div class="widget kpi-card kpi-red">
+        <div class="kpi-accent"></div>
+        <div class="widget-header">
+          <div>
+            <div class="widget-title">Leased Assets — End of Life</div>
+            <div class="widget-subtitle">Need return or renewal action</div>
+          </div>
+          <span class="widget-type-badge">Single Score</span>
+        </div>
+        <div class="widget-body">
+          <div class="kpi-value">2,307</div>
+          <div class="kpi-desc">acquisition_method = "Lease" AND life_cycle_stage = "End of Life"</div>
+          <div class="kpi-tag">🔄 Return / Renew</div>
+        </div>
+      </div>
+
+      <!-- KPI: Purchased EOL -->
+      <div class="widget kpi-card kpi-amber">
+        <div class="kpi-accent"></div>
+        <div class="widget-header">
+          <div>
+            <div class="widget-title">Purchased Assets — End of Life</div>
+            <div class="widget-subtitle">Owned assets needing disposal approval</div>
+          </div>
+          <span class="widget-type-badge">Single Score</span>
+        </div>
+        <div class="widget-body">
+          <div class="kpi-value">2,201</div>
+          <div class="kpi-desc">acquisition_method = "Purchase" AND life_cycle_stage = "End of Life"</div>
+          <div class="kpi-tag">📋 Disposal approval needed</div>
+        </div>
+      </div>
+
+    </div><!-- /Lease vs Purchase -->
+
+    <!-- ── SECTION: Leased Missing Risk ──────────────────────────── -->
+    <div class="widget-row cols-2">
+
+      <!-- Bar: Lease Returned by Status -->
+      <div class="widget">
+        <div class="widget-header">
+          <div>
+            <div class="widget-title">Leased Assets — Awaiting Verification</div>
+            <div class="widget-subtitle">778 leased assets not scanning — financial risk</div>
+          </div>
+          <span class="widget-type-badge">Donut Chart</span>
+        </div>
+        <div class="widget-body">
+          <div class="chart-wrap" style="height:190px">
+            <canvas id="c-lease-risk"></canvas>
+          </div>
+          <div class="warn-note">
+            ⚠ <strong>72 missing leased assets</strong> represent active financial liability. These need immediate physical investigation. Field: acquisition_method = "Lease" AND install_status = "Missing".
+          </div>
+        </div>
+      </div>
+
+      <!-- Bar: Leased Retired Breakdown -->
+      <div class="widget">
+        <div class="widget-header">
+          <div>
+            <div class="widget-title">Retired Assets — By Acquisition</div>
+            <div class="widget-subtitle">How retired assets were originally acquired</div>
+          </div>
+          <span class="widget-type-badge">Donut Chart</span>
+        </div>
+        <div class="widget-body">
+          <div class="chart-wrap" style="height:190px">
+            <canvas id="c-retired-acq"></canvas>
+          </div>
+          <div class="impl-note">
+            <div class="note-title">SN: Breakdown</div>
+            Filter: <strong>install_status = "Retired"</strong>, group by <strong>acquisition_method</strong>. Leased retired assets may still require formal return to DFS.
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div><!-- /tab-fieldtech -->
+
+</div><!-- /dashboard -->
+
+<!-- ════════════════════════════════════════════════════════════════════
+     JAVASCRIPT — Tab Switching + Chart.js Initialization
+     ════════════════════════════════════════════════════════════════════ -->
+<script>
+/* ── Tab Switcher ─────────────────────────────────────────────────── */
+function switchTab(id, el) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  el.classList.add('active');
+}
+
+/* ── Chart Defaults ───────────────────────────────────────────────── */
+Chart.defaults.font.size = 11;
+Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif";
+Chart.defaults.color = '#4d5358';
+Chart.defaults.plugins.legend.labels.boxWidth = 11;
+Chart.defaults.plugins.legend.labels.padding = 12;
+
+const C = {
+  blue:       '#0e77b7',
+  green:      '#3da75d',
+  red:        '#c62828',
+  amber:      '#e5a117',
+  purple:     '#7b3fc4',
+  teal:       '#00897b',
+  orange:     '#f57c00',
+  gray:       '#9e9e9e',
+  navy:       '#1c4f82',
+  pink:       '#d81b60',
+  indigo:     '#3f51b5',
+  lightGreen: '#a5d6a7',
+  lightBlue:  '#90caf9',
+  lightAmber: '#ffe082',
+  lightRed:   '#ef9a9a',
+};
+
+function donut(id, labels, data, colors) {
+  new Chart(document.getElementById(id), {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: colors,
+        borderWidth: 2,
+        borderColor: '#fff',
+        hoverOffset: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '62%',
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 } } },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.label}: ${ctx.parsed.toLocaleString()} (${((ctx.parsed / ctx.dataset.data.reduce((a,b)=>a+b,0))*100).toFixed(1)}%)`
+          }
+        }
+      }
+    }
+  });
+}
+
+function hBar(id, labels, data, color, maxLabel) {
+  new Chart(document.getElementById(id), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: color || C.blue,
+        borderRadius: 3,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          grid: { color: '#f0f2f5' },
+          ticks: {
+            font: { size: 10 },
+            callback: v => v >= 1000 ? (v/1000).toFixed(1)+'k' : v
+          }
+        },
+        y: {
+          grid: { display: false },
+          ticks: {
+            font: { size: 10 },
+            maxTicksLimit: 12
+          }
+        }
+      }
+    }
+  });
+}
+
+function vBarStacked(id, labels, datasets) {
+  new Chart(document.getElementById(id), {
+    type: 'bar',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', labels: { font: { size: 11 } } }
+      },
+      scales: {
+        x: {
+          stacked: true,
+          grid: { display: false },
+          ticks: { font: { size: 11 } }
+        },
+        y: {
+          stacked: true,
+          grid: { color: '#f0f2f5' },
+          ticks: {
+            font: { size: 10 },
+            callback: v => v >= 1000 ? (v/1000).toFixed(1)+'k' : v
+          }
+        }
+      }
+    }
+  });
+}
+
+function vBar(id, labels, data, colors) {
+  new Chart(document.getElementById(id), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: colors || C.blue,
+        borderRadius: 4,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 35 } },
+        y: {
+          grid: { color: '#f0f2f5' },
+          ticks: {
+            font: { size: 10 },
+            callback: v => v >= 1000 ? (v/1000).toFixed(1)+'k' : v
+          }
+        }
+      }
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   LEADERSHIP VIEW CHARTS
+   ═══════════════════════════════════════════════════════════════════ */
+
+// 1. Device Type
+donut('c-device-type',
+  ['Laptops', 'Desktops'],
+  [18421, 4751],
+  [C.blue, C.indigo]
+);
+
+// 2. Lifecycle Stage
+donut('c-lifecycle',
+  ['To Be Determined', 'Operational', 'End of Life', 'Awaiting Verification', 'Inventory', 'Missing / End of Op'],
+  [11895, 5079, 4566, 1260, 218, 148],
+  [C.gray, C.green, C.red, C.amber, C.teal, C.orange]
+);
+
+// 3. Acquisition Method
+donut('c-acquisition',
+  ['Not Specified (EMEIA)', 'Lease', 'Purchase'],
+  [12556, 7564, 3046],
+  [C.gray, C.blue, C.green]
+);
+
+// 4. Top 10 Countries (horizontal bar)
+hBar('c-countries',
+  ['USA', 'Mexico', 'Germany', 'India', 'France', 'Canada', 'Italy', 'Australia', 'Netherlands', 'UK'],
+  [11206, 2800, 2794, 1403, 732, 534, 520, 448, 397, 344],
+  [C.navy, C.blue, C.lightBlue, C.teal, C.indigo, C.purple, C.orange, C.green, C.teal, C.pink]
+);
+
+// 5. Asset Status by Acquisition Method (stacked bar)
+vBarStacked('c-status-acq',
+  ['Lease', 'Purchase', 'Not Specified'],
+  [
+    {
+      label: 'In Use',
+      data: [4158, 743, 11955],
+      backgroundColor: C.green,
+      borderRadius: 0
+    },
+    {
+      label: 'Retired',
+      data: [2307, 2201, 172],
+      backgroundColor: C.gray,
+      borderRadius: 0
+    },
+    {
+      label: 'Awaiting Verification',
+      data: [778, 67, 414],
+      backgroundColor: C.amber,
+      borderRadius: 0
+    },
+    {
+      label: 'In Stock / Other',
+      data: [252, 35, 15],
+      backgroundColor: C.teal,
+      borderRadius: 4
+    }
+  ]
+);
+
+// 6. EOL by Country
+hBar('c-eol-country',
+  ['USA', 'Germany', 'Mexico', 'India', 'France', 'Italy', 'Canada', 'Australia'],
+  [2210, 660, 420, 210, 175, 125, 105, 95],
+  C.red
+);
+
+// 7. EOL Lease vs Purchase
+donut('c-eol-acq',
+  ['Lease (EOL)', 'Purchase (EOL)', 'Not Specified (EOL)'],
+  [2307, 2201, 58],
+  [C.blue, C.green, C.gray]
+);
+
+// 8. Manufacturer
+hBar('c-manufacturer',
+  ['Dell Inc.', 'Apple', 'Lenovo', 'Hewlett-Packard', 'Microsoft (Surface)', 'Other'],
+  [21000, 640, 213, 117, 48, 112],
+  [C.blue, C.gray, C.indigo, C.teal, C.orange, C.lightBlue]
+);
+
+/* ═══════════════════════════════════════════════════════════════════
+   FIELD TECHNICIAN VIEW CHARTS
+   ═══════════════════════════════════════════════════════════════════ */
+
+// 9. Assets by Substatus (actionable)
+vBar('c-substatus',
+  ['Pending\nDisposal', 'Lease\nReturned', 'Scan >30\nDays', 'End of\nSupport', 'Avail. -\nNew', 'Unlocated', 'RMA', 'Disposed', 'Pending\nReturn', 'Lost'],
+  [2206, 2215, 1149, 660, 177, 88, 79, 66, 44, 104],
+  [C.amber, C.gray, C.red, C.orange, C.green, C.purple, C.teal, C.navy, C.indigo, C.red]
+);
+
+// 10. Support Groups
+hBar('c-support-groups',
+  ['US Remote FST', 'Ensenada FST', 'EMEIA Interflex', 'Carmel FST', 'EMEIA India', 'Colorado Springs FST', 'Indy Exits Facility', 'EMEIA SimonsVoss'],
+  [3146, 1754, 1590, 1388, 1376, 1175, 1059, 1040],
+  [C.blue, C.teal, C.indigo, C.blue, C.orange, C.blue, C.blue, C.indigo]
+);
+
+// 11. Install Status
+donut('c-install-status',
+  ['In Use', 'Retired', 'Awaiting Verification', 'In Stock', 'Missing', 'On Order'],
+  [16861, 4680, 1260, 263, 104, 4],
+  [C.green, C.gray, C.amber, C.teal, C.red, C.lightBlue]
+);
+
+// 12. Leased Assets Risk Breakdown
+donut('c-lease-risk',
+  ['Leased — In Use', 'Leased — Awaiting Verification', 'Leased — Missing', 'Leased — In Stock'],
+  [4158, 778, 72, 245],
+  [C.green, C.amber, C.red, C.teal]
+);
+
+// 13. Retired by Acquisition
+donut('c-retired-acq',
+  ['Lease (Retired)', 'Purchase (Retired)', 'Not Specified (Retired)'],
+  [2307, 2201, 172],
+  [C.blue, C.green, C.gray]
+);
+
+</script>
+</body>
+</html>
